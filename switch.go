@@ -491,23 +491,23 @@ func Connect2Switches(switches []*Switch, i, j int) {
 	switchI := switches[i]
 	switchJ := switches[j]
 	c1, c2 := net.Pipe()
-	doneCh := make(chan struct{})
+	//doneCh := make(chan struct{})
 	go func() {
 		_, err := switchI.AddPeerWithConnection(c1, false) // AddPeer is blocking, requires handshake.
 		if err != nil {
 			panic(err)
 		}
-		doneCh <- struct{}{}
+		//doneCh <- struct{}{}
 	}()
 	go func() {
 		_, err := switchJ.AddPeerWithConnection(c2, true)
 		if err != nil {
 			panic(err)
 		}
-		doneCh <- struct{}{}
+		//doneCh <- struct{}{}
 	}()
-	<-doneCh
-	<-doneCh
+	//<-doneCh
+	//<-doneCh
 }
 
 func StartSwitches(switches []*Switch) error {
