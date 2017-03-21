@@ -33,9 +33,9 @@ func makeDummyConnPair() (fooConn, barConn dummyConn) {
 func makeSecretConnPair(tb testing.TB) (fooSecConn, barSecConn *SecretConnection) {
 	fooConn, barConn := makeDummyConnPair()
 	fooPrvKey := crypto.GenPrivKeyEd25519()
-	fooPubKey := fooPrvKey.PubKey().(crypto.PubKeyEd25519)
+	fooPubKey := fooPrvKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
 	barPrvKey := crypto.GenPrivKeyEd25519()
-	barPubKey := barPrvKey.PubKey().(crypto.PubKeyEd25519)
+	barPubKey := barPrvKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
 
 	Parallel(
 		func() {

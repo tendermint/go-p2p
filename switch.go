@@ -149,7 +149,7 @@ func (sw *Switch) NodeInfo() *NodeInfo {
 func (sw *Switch) SetNodePrivKey(nodePrivKey crypto.PrivKeyEd25519) {
 	sw.nodePrivKey = nodePrivKey
 	if sw.nodeInfo != nil {
-		sw.nodeInfo.PubKey = nodePrivKey.PubKey().(crypto.PubKeyEd25519)
+		sw.nodeInfo.PubKey = nodePrivKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
 	}
 }
 
@@ -231,14 +231,15 @@ func (sw *Switch) AddPeerWithConnection(conn net.Conn, outbound bool) (*Peer, er
 	}
 	if sw.config.GetBool(configKeyAuthEnc) {
 		// Check that the professed PubKey matches the sconn's.
-		if !peerNodeInfo.PubKey.Equals(sconn.(*SecretConnection).RemotePubKey()) {
+		if !peerNodeInfo.PubKey.Equals(
+			crypto.WrapPubKey(sconn.(*SecretConnection).RemotePubKey())) {
 			sconn.Close()
 			return nil, fmt.Errorf("Ignoring connection with unmatching pubkey: %v vs %v",
 				peerNodeInfo.PubKey, sconn.(*SecretConnection).RemotePubKey())
 		}
 	}
 	// Avoid self
-	if peerNodeInfo.PubKey.Equals(sw.nodeInfo.PubKey) {
+	if peerNodeInfo.PubKey.Equals(crypto.WrapPubKey(sw.nodeInfo.PubKey)) {
 		sconn.Close()
 		return nil, fmt.Errorf("Ignoring connection from self")
 	}
@@ -544,7 +545,7 @@ func makeSwitch(i int, network, version string, initSwitch func(int, *Switch) *S
 	// TODO: let the config be passed in?
 	s := initSwitch(i, NewSwitch(cfg.NewMapConfig(nil)))
 	s.SetNodeInfo(&NodeInfo{
-		PubKey:  privKey.PubKey().(crypto.PubKeyEd25519),
+		PubKey:  privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
 		Moniker: Fmt("switch%d", i),
 		Network: network,
 		Version: version,
