@@ -174,8 +174,8 @@ func TestConnAddrFilter(t *testing.T) {
 	})
 
 	// connect to good peer
-	go s1.AddPeerWithConnection(c1, false) // AddPeer is blocking, requires handshake.
-	go s2.AddPeerWithConnection(c2, true)
+	go s1.AddPeerWithConnection(c1, false, false) // AddPeer is blocking, requires handshake.
+	go s2.AddPeerWithConnection(c2, true, false)
 
 	// Wait for things to happen, peers to get added...
 	time.Sleep(100 * time.Millisecond * time.Duration(4))
@@ -205,8 +205,8 @@ func TestConnPubKeyFilter(t *testing.T) {
 	})
 
 	// connect to good peer
-	go s1.AddPeerWithConnection(c1, false) // AddPeer is blocking, requires handshake.
-	go s2.AddPeerWithConnection(c2, true)
+	go s1.AddPeerWithConnection(c1, false, false) // AddPeer is blocking, requires handshake.
+	go s2.AddPeerWithConnection(c2, true, false)
 
 	// Wait for things to happen, peers to get added...
 	time.Sleep(100 * time.Millisecond * time.Duration(4))
