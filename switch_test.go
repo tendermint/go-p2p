@@ -9,21 +9,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/viper"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	. "github.com/tendermint/go-common"
-	cmn "github.com/tendermint/go-common"
-	cfg "github.com/tendermint/go-config"
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 )
 
-var (
-	config cfg.Config
-)
+var config *viper.Viper
 
 func init() {
-	config = cfg.NewMapConfig(nil)
+	config = viper.New()
 	setConfigDefaults(config)
 }
 
@@ -356,7 +355,7 @@ func accept(l net.Listener, done <-chan struct{}, sw *Switch) {
 		}
 		var err1, err2 error
 		nodeInfo := new(NodeInfo)
-		cmn.Parallel(
+		Parallel(
 			func() {
 				var n int
 				wire.WriteBinary(sw.nodeInfo, conn, &n, &err1)
