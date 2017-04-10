@@ -4,7 +4,7 @@ import:
 - package: github.com/tendermint/go-config
   version: develop
 - package: github.com/tendermint/go-crypto
-  version: develop
+  version: unstable
 - package: github.com/tendermint/go-flowrate
   subpackages:
   - flowrate
