@@ -1,0 +1,26 @@
+package: github.com/tendermint/go-p2p
+import:
+- package: github.com/tendermint/go-common
+- package: github.com/tendermint/go-config
+  version: develop
+- package: github.com/tendermint/go-crypto
+  version: develop
+- package: github.com/tendermint/go-flowrate
+  subpackages:
+  - flowrate
+- package: github.com/tendermint/go-logger
+  version: cefb3a45c0bf3c493a04e9bcd9b1540528be59f2
+- package: github.com/tendermint/go-wire
+  version: develop
+- package: github.com/tendermint/log15
+  version: ae0f3d6450da9eac7074b439c8e1c3cabf0d5ce6
+- package: golang.org/x/crypto
+  subpackages:
+  - nacl/box
+  - nacl/secretbox
+  - ripemd160
+testImport:
+- package: github.com/stretchr/testify
+  version: ^1.1.4
+  subpackages:
+  - assert
