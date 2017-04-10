@@ -194,7 +194,7 @@ func (sw *Switch) OnStop() {
 
 // NOTE: This performs a blocking handshake before the peer is added.
 // CONTRACT: Iff error is returned, peer is nil, and conn is immediately closed.
-func (sw *Switch) AddPeerWithConnection(conn net.Conn, outbound bool) (*Peer, error) {
+func (sw *Switch) AddPeerWithConnection(conn net.Conn, outbound, persistent bool) (*Peer, error) {
 
 	// Filter by addr (ie. ip:port)
 	if err := sw.FilterConnByAddr(conn.RemoteAddr()); err != nil {
@@ -248,7 +248,11 @@ func (sw *Switch) AddPeerWithConnection(conn net.Conn, outbound bool) (*Peer, er
 		return nil, err
 	}
 
-	peer := newPeer(sw.config, sconn, peerNodeInfo, outbound, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError)
+	onPeerError := sw.StopPeerForError
+	if persistent {
+		onPeerError = sw.ReconnectPeerOnError
+	}
+	peer := newPeer(sw.config, sconn, peerNodeInfo, outbound, sw.reactorsByCh, sw.chDescs, onPeerError)
 
 	// Add the peer to .peers
 	// ignore if duplicate or if we already have too many for that IP range
@@ -297,8 +301,8 @@ func (sw *Switch) startInitPeer(peer *Peer) {
 }
 
 // Dial a list of seeds asynchronously in random order
+// NOTE: These peers will be persistent
 func (sw *Switch) DialSeeds(addrBook *AddrBook, seeds []string) error {
-
 	netAddrs, err := NewNetAddressStrings(seeds)
 	if err != nil {
 		return err
@@ -331,7 +335,7 @@ func (sw *Switch) DialSeeds(addrBook *AddrBook, seeds []string) error {
 }
 
 func (sw *Switch) dialSeed(addr *NetAddress) {
-	peer, err := sw.DialPeerWithAddress(addr)
+	peer, err := sw.DialPeerWithAddress(addr, true)
 	if err != nil {
 		log.Error("Error dialing seed", "error", err)
 		return
@@ -340,7 +344,7 @@ func (sw *Switch) dialSeed(addr *NetAddress) {
 	}
 }
 
-func (sw *Switch) DialPeerWithAddress(addr *NetAddress) (*Peer, error) {
+func (sw *Switch) DialPeerWithAddress(addr *NetAddress, persistent bool) (*Peer, error) {
 	log.Info("Dialing address", "address", addr)
 	sw.dialing.Set(addr.IP.String(), addr)
 	conn, err := addr.DialTimeout(time.Duration(
@@ -353,7 +357,7 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress) (*Peer, error) {
 	if sw.config.GetBool(configFuzzEnable) {
 		conn = FuzzConn(sw.config, conn)
 	}
-	peer, err := sw.AddPeerWithConnection(conn, true)
+	peer, err := sw.AddPeerWithConnection(conn, true, persistent)
 	if err != nil {
 		log.Info("Failed adding peer", "address", addr, "conn", conn, "error", err)
 		return nil, err
@@ -409,6 +413,34 @@ func (sw *Switch) StopPeerForError(peer *Peer, reason interface{}) {
 	sw.removePeerFromReactors(peer, reason)
 }
 
+// Attempt to reconnect to the peer
+func (sw *Switch) ReconnectPeerOnError(peer *Peer, reason interface{}) {
+	addr := peer.Connection().RemoteAddress
+	sw.StopPeerForError(peer, reason)
+
+	// in a go-routine so we don't recur infinitely
+	go func() {
+		log.Notice("ReconnectPeerOnError", "peer", peer, "error", reason)
+		reconnectAttempts := 30
+		reconnectInterval := 3 * time.Second
+		for i := 1; i < reconnectAttempts; i++ {
+			peer, err := sw.DialPeerWithAddress(addr, true)
+			if err != nil {
+				if i == reconnectAttempts {
+					log.Notice("Error reconnecting to peer. Giving up", "tries", i, "error", err)
+					return
+				}
+				log.Notice("Error reconnecting to peer. Trying again", "tries", i, "error", err)
+				time.Sleep(reconnectInterval)
+				continue
+			}
+
+			log.Notice("Reconnected to peer", "peer", peer)
+			return
+		}
+	}()
+}
+
 // Disconnect from a peer gracefully.
 // TODO: handle graceful disconnects.
 func (sw *Switch) StopPeerGracefully(peer *Peer) {
@@ -449,7 +481,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 		}
 
 		// New inbound connection!
-		_, err := sw.AddPeerWithConnection(inConn, false)
+		_, err := sw.AddPeerWithConnection(inConn, false, false)
 		if err != nil {
 			log.Notice("Ignoring inbound connection: error on AddPeerWithConnection", "address", inConn.RemoteAddr().String(), "error", err)
 			continue
@@ -511,14 +543,14 @@ func Connect2Switches(switches []*Switch, i, j int) {
 	c1, c2 := net.Pipe()
 	doneCh := make(chan struct{})
 	go func() {
-		_, err := switchI.AddPeerWithConnection(c1, false) // AddPeer is blocking, requires handshake.
+		_, err := switchI.AddPeerWithConnection(c1, false, true) // AddPeer is blocking, requires handshake.
 		if PanicOnAddPeerErr && err != nil {
 			panic(err)
 		}
 		doneCh <- struct{}{}
 	}()
 	go func() {
-		_, err := switchJ.AddPeerWithConnection(c2, true)
+		_, err := switchJ.AddPeerWithConnection(c2, true, true)
 		if PanicOnAddPeerErr && err != nil {
 			panic(err)
 		}
