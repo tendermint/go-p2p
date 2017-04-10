@@ -232,14 +232,14 @@ func (sw *Switch) AddPeerWithConnection(conn net.Conn, outbound bool) (*Peer, er
 	if sw.config.GetBool(configKeyAuthEnc) {
 		// Check that the professed PubKey matches the sconn's.
 		if !peerNodeInfo.PubKey.Equals(
-			crypto.WrapPubKey(sconn.(*SecretConnection).RemotePubKey())) {
+			sconn.(*SecretConnection).RemotePubKey().Wrap()) {
 			sconn.Close()
 			return nil, fmt.Errorf("Ignoring connection with unmatching pubkey: %v vs %v",
 				peerNodeInfo.PubKey, sconn.(*SecretConnection).RemotePubKey())
 		}
 	}
 	// Avoid self
-	if peerNodeInfo.PubKey.Equals(crypto.WrapPubKey(sw.nodeInfo.PubKey)) {
+	if peerNodeInfo.PubKey.Equals(sw.nodeInfo.PubKey.Wrap()) {
 		sconn.Close()
 		return nil, fmt.Errorf("Ignoring connection from self")
 	}

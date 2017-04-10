@@ -12,6 +12,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"time"
@@ -47,7 +48,6 @@ type SecretConnection struct {
 // Caller should call conn.Close()
 // See docs/sts-final.pdf for more information.
 func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey crypto.PrivKeyEd25519) (*SecretConnection, error) {
-
 	locPubKey := locPrivKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
 
 	// Generate ephemeral keys for perfect forward secrecy.
@@ -85,16 +85,19 @@ func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey crypto.PrivKeyEd25
 	// Sign the challenge bytes for authentication.
 	locSignature := signChallenge(challenge, locPrivKey)
 
+	fmt.Println("AA")
 	// Share (in secret) each other's pubkey & challenge signature
 	authSigMsg, err := shareAuthSignature(sc, locPubKey, locSignature)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("BB")
 	remPubKey, remSignature := authSigMsg.Key, authSigMsg.Sig
 	if !remPubKey.VerifyBytes(challenge[:], remSignature) {
 		return nil, errors.New("Challenge verification failed")
 	}
 
+	fmt.Println("CC")
 	// We've authorized.
 	sc.remPubKey = remPubKey.Unwrap().(crypto.PubKeyEd25519)
 	return sc, nil
@@ -271,14 +274,17 @@ func shareAuthSignature(sc *SecretConnection, pubKey crypto.PubKeyEd25519, signa
 	Parallel(
 		func() {
 			msgBytes := wire.BinaryBytes(authSigMessage{
-				Key: crypto.WrapPubKey(pubKey),
-				Sig: crypto.WrapSignature(signature),
+				Key: pubKey.Wrap(),
+				Sig: signature.Wrap(),
 			})
 			_, err1 = sc.Write(msgBytes)
+			fmt.Printf("write: %+v, %d\n", err1, len(msgBytes))
 		},
 		func() {
+			fmt.Printf("Reading %d bytes\n", authSigMsgSize)
 			readBuffer := make([]byte, authSigMsgSize)
 			_, err2 = io.ReadFull(sc, readBuffer)
+			fmt.Printf("read: %+v\n", err2)
 			if err2 != nil {
 				return
 			}
@@ -297,7 +303,7 @@ func shareAuthSignature(sc *SecretConnection, pubKey crypto.PubKeyEd25519, signa
 }
 
 func verifyChallengeSignature(challenge *[32]byte, remPubKey crypto.PubKeyEd25519, remSignature crypto.SignatureEd25519) bool {
-	return remPubKey.VerifyBytes(challenge[:], crypto.WrapSignature(remSignature))
+	return remPubKey.VerifyBytes(challenge[:], remSignature.Wrap())
 }
 
 //--------------------------------------------------------------------------------
