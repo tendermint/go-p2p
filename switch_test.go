@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	. "github.com/tendermint/go-common"
+	cmn "github.com/tendermint/go-common"
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 )
@@ -326,7 +326,7 @@ func BenchmarkSwitches(b *testing.B) {
 		}
 	}
 
-	log.Warn(Fmt("success: %v, failure: %v", numSuccess, numFailure))
+	log.Warn(fmt.Sprintf("success: %v, failure: %v", numSuccess, numFailure))
 
 	// Allow everything to flush before stopping switches & closing connections.
 	b.StopTimer()
@@ -355,7 +355,7 @@ func accept(l net.Listener, done <-chan struct{}, sw *Switch) {
 		}
 		var err1, err2 error
 		nodeInfo := new(NodeInfo)
-		Parallel(
+		cmn.Parallel(
 			func() {
 				var n int
 				wire.WriteBinary(sw.nodeInfo, conn, &n, &err1)
