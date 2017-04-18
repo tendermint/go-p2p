@@ -6,8 +6,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/spf13/viper"
+
 	cmn "github.com/tendermint/go-common"
-	cfg "github.com/tendermint/go-config"
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 )
@@ -27,14 +28,14 @@ type Peer struct {
 
 	authEnc    bool // authenticated encryption
 	persistent bool
-	config     cfg.Config
+	config     *viper.Viper
 
 	*NodeInfo
 	Key  string
 	Data *cmn.CMap // User data.
 }
 
-func newPeer(addr *NetAddress, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), config cfg.Config, privKey crypto.PrivKeyEd25519) (*Peer, error) {
+func newPeer(addr *NetAddress, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), config *viper.Viper, privKey crypto.PrivKeyEd25519) (*Peer, error) {
 	conn, err := dial(addr, config)
 	if err != nil {
 		return nil, err
@@ -49,7 +50,7 @@ func newPeer(addr *NetAddress, reactorsByCh map[byte]Reactor, chDescs []*Channel
 	return peer, nil
 }
 
-func newPeerFromExistingConn(conn net.Conn, outbound bool, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), config cfg.Config, privKey crypto.PrivKeyEd25519) (*Peer, error) {
+func newPeerFromExistingConn(conn net.Conn, outbound bool, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), config *viper.Viper, privKey crypto.PrivKeyEd25519) (*Peer, error) {
 	// Encrypt connection
 	if config.GetBool(configKeyAuthEnc) {
 		var err error
@@ -238,7 +239,7 @@ func (p *Peer) Get(key string) interface{} {
 	return p.Data.Get(key)
 }
 
-func dial(addr *NetAddress, config cfg.Config) (net.Conn, error) {
+func dial(addr *NetAddress, config *viper.Viper) (net.Conn, error) {
 	log.Info("Dialing address", "address", addr)
 	conn, err := addr.DialTimeout(time.Duration(
 		config.GetInt(configKeyDialTimeoutSeconds)) * time.Second)
@@ -252,7 +253,7 @@ func dial(addr *NetAddress, config cfg.Config) (net.Conn, error) {
 	return conn, nil
 }
 
-func createMConnection(conn net.Conn, p *Peer, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), config cfg.Config) *MConnection {
+func createMConnection(conn net.Conn, p *Peer, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), config *viper.Viper) *MConnection {
 	onReceive := func(chID byte, msgBytes []byte) {
 		reactor := reactorsByCh[chID]
 		if reactor == nil {

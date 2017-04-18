@@ -1,8 +1,6 @@
 package p2p
 
-import (
-	cfg "github.com/tendermint/go-config"
-)
+import "github.com/spf13/viper"
 
 const (
 	// Switch config keys
@@ -25,7 +23,7 @@ const (
 	configFuzzProbSleep            = "fuzz_prob_sleep"
 )
 
-func setConfigDefaults(config cfg.Config) {
+func setConfigDefaults(config *viper.Viper) {
 	// Switch default config
 	config.SetDefault(configKeyDialTimeoutSeconds, 3)
 	config.SetDefault(configKeyHandshakeTimeoutSeconds, 20)

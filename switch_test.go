@@ -9,21 +9,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/viper"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	. "github.com/tendermint/go-common"
+
 	cmn "github.com/tendermint/go-common"
-	cfg "github.com/tendermint/go-config"
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 )
 
-var (
-	config cfg.Config
-)
+var config *viper.Viper
 
 func init() {
-	config = cfg.NewMapConfig(nil)
+	config = viper.New()
 	setConfigDefaults(config)
 }
 
@@ -327,7 +326,7 @@ func BenchmarkSwitches(b *testing.B) {
 		}
 	}
 
-	log.Warn(Fmt("success: %v, failure: %v", numSuccess, numFailure))
+	log.Warn(fmt.Sprintf("success: %v, failure: %v", numSuccess, numFailure))
 
 	// Allow everything to flush before stopping switches & closing connections.
 	b.StopTimer()
